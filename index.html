@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurelia Estates — Scroll Through Your Next Home</title>
+<meta name="description" content="A 3D scroll-through real estate showcase with real property photography.">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --ink: #f4efe6;
+    --muted: #a9a398;
+    --gold: #d4a85a;
+    --card: rgba(18, 21, 26, .72);
+    --line: rgba(255, 255, 255, .12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    overflow-x: hidden;
+  }
+  h1, h2, h3, .serif { font-family: Georgia, "Times New Roman", serif; font-weight: 400; letter-spacing: -.01em; }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 28px;
+    background: linear-gradient(to bottom, rgba(11,13,16,.8), transparent);
+  }
+  .logo { font-family: Georgia, serif; font-size: 1.25rem; letter-spacing: .08em; }
+  .logo b { color: var(--gold); font-weight: 400; }
+  nav ul { display: flex; gap: 26px; list-style: none; }
+  nav a { color: var(--ink); text-decoration: none; font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
+  nav a:hover { opacity: 1; color: var(--gold); }
+
+  /* ---------- progress ---------- */
+  #bar { position: fixed; left: 0; top: 0; height: 3px; width: 0; background: var(--gold); z-index: 60; }
+  #counter {
+    position: fixed; right: 28px; bottom: 26px; z-index: 50;
+    font-size: .75rem; letter-spacing: .2em; color: var(--muted); text-transform: uppercase;
+  }
+  #counter b { color: var(--gold); font-weight: 400; }
+  #hint {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 50;
+    font-size: .72rem; letter-spacing: .3em; text-transform: uppercase; color: var(--muted);
+    transition: opacity .4s;
+  }
+  #hint::after { content: ""; display: block; width: 1px; height: 34px; margin: 10px auto 0; background: linear-gradient(var(--gold), transparent); animation: drip 1.6s infinite; }
+  @keyframes drip { 0% { transform: scaleY(0); transform-origin: top; } 60% { transform: scaleY(1); transform-origin: top; } 100% { transform: scaleY(1); opacity: 0; } }
+
+  /* ---------- 3D stage ---------- */
+  #track { height: 900vh; }               /* scroll distance */
+  #stage {
+    position: fixed; inset: 0; overflow: hidden;
+    perspective: 1100px; perspective-origin: 50% 46%;
+    background:
+      radial-gradient(ellipse at 50% 40%, #1b212b 0%, #0b0d10 70%);
+  }
+  #world { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+
+  /* floor grid for depth cue */
+  #floor {
+    position: absolute; left: 50%; top: 50%;
+    width: 4000px; height: 20000px;
+    margin-left: -2000px;
+    transform-origin: 50% 0;
+    transform: translate3d(0, 330px, 0) rotateX(90deg) translateY(-20000px);
+    background:
+      repeating-linear-gradient(to right, rgba(212,168,90,.13) 0 1px, transparent 1px 160px),
+      repeating-linear-gradient(to bottom, rgba(212,168,90,.13) 0 1px, transparent 1px 160px);
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+            mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  }
+
+  .item { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; will-change: transform, opacity; }
+
+  /* hero */
+  .hero { width: min(900px, 90vw); text-align: center; }
+  .hero .eyebrow { font-size: .78rem; letter-spacing: .4em; text-transform: uppercase; color: var(--gold); margin-bottom: 22px; }
+  .hero h1 { font-size: clamp(2.6rem, 8vw, 6.4rem); line-height: 1.02; text-shadow: 0 10px 50px rgba(0,0,0,.7); }
+  .hero h1 em { color: var(--gold); }
+  .hero p { margin: 24px auto 0; max-width: 520px; color: var(--muted); line-height: 1.6; }
+
+  /* property panel */
+  .prop { width: min(760px, 82vw); }
+  .prop .photo {
+    position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
+    border-radius: 6px; border: 1px solid var(--line);
+    background: linear-gradient(135deg, #2a313c, #14181e);
+    box-shadow: 0 40px 90px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .prop .photo img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.08); transition: transform 1.2s ease; }
+  .prop:hover .photo img { transform: scale(1.14); }
+  .prop .photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.45), transparent 45%); pointer-events: none; }
+  .tag {
+    position: absolute; z-index: 2; top: 16px; left: 16px;
+    background: var(--gold); color: #1a1408; font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 2px;
+  }
+  .info {
+    position: absolute; z-index: 3; bottom: -46px; width: 62%;
+    background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: 6px; padding: 22px 24px;
+    transform: translateZ(90px);
+    box-shadow: 0 30px 60px rgba(0,0,0,.5);
+  }
+  .prop.left  .info { right: -40px; }
+  .prop.right .info { left: -40px; }
+  .info h3 { font-size: 1.6rem; margin-bottom: 4px; }
+  .info .loc { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .info .price { font-family: Georgia, serif; font-size: 1.7rem; color: var(--gold); margin: 12px 0; }
+  .specs { display: flex; gap: 18px; font-size: .82rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap; }
+  .specs b { color: var(--ink); font-weight: 500; }
+  .num {
+    position: absolute; top: -.55em; font-family: Georgia, serif; font-size: clamp(5rem, 14vw, 11rem);
+    color: transparent; -webkit-text-stroke: 1px rgba(212,168,90,.45); line-height: 1; transform: translateZ(-120px);
+  }
+  .prop.left .num  { left: -.5em; }
+  .prop.right .num { right: -.5em; }
+
+  /* floating satellite photos for parallax */
+  .float { width: clamp(120px, 16vw, 230px); aspect-ratio: 4/5; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 25px 60px rgba(0,0,0,.6); background: #1b2028; }
+  .float img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* stats */
+  .stats { width: min(1000px, 90vw); display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
+  .stat { background: var(--card); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 6px; padding: 34px 10px; }
+  .stat strong { display: block; font-family: Georgia, serif; font-weight: 400; font-size: clamp(2rem, 5vw, 3.6rem); color: var(--gold); }
+  .stat span { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .stats-title { position: absolute; left: 0; right: 0; top: -110px; text-align: center; font-size: clamp(1.8rem, 4vw, 3rem); }
+
+  /* contact */
+  .contact { width: min(860px, 90vw); display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); backdrop-filter: blur(14px); box-shadow: 0 40px 100px rgba(0,0,0,.7); }
+  .contact .pic { min-height: 380px; background: #1b2028; }
+  .contact .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .contact form { padding: 34px; display: flex; flex-direction: column; gap: 14px; }
+  .contact h2 { font-size: 2rem; }
+  .contact p { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+  .contact input, .contact select {
+    background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--ink);
+    padding: 13px 14px; border-radius: 4px; font: inherit; font-size: .9rem;
+  }
+  .contact select option { color: #111; }
+  .contact input:focus, .contact select:focus { outline: 1px solid var(--gold); }
+  .contact button {
+    background: var(--gold); color: #1a1408; border: 0; padding: 14px; border-radius: 4px;
+    letter-spacing: .18em; text-transform: uppercase; font-size: .76rem; cursor: pointer; font-weight: 600;
+  }
+  .contact button:hover { filter: brightness(1.1); }
+  #thanks { color: var(--gold); font-size: .9rem; min-height: 1.2em; }
+
+  /* ---------- small screens ---------- */
+  @media (max-width: 760px) {
+    nav ul { display: none; }
+    .info { position: relative; bottom: auto; width: 92%; margin: -40px auto 0; left: auto !important; right: auto !important; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .contact { grid-template-columns: 1fr; }
+    .contact .pic { display: none; }
+    #counter { display: none; }
+  }
+
+  /* ---------- reduced motion: plain stacked page ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    #track { height: auto; }
+    #stage { position: static; perspective: none; height: auto; }
+    #world { position: static; transform: none !important; padding: 100px 0; display: flex; flex-direction: column; align-items: center; gap: 120px; }
+    .item { position: static; transform: none !important; opacity: 1 !important; }
+    #floor, .float, #hint, #counter { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<nav>
+  <div class="logo">AURELIA<b>.</b>ESTATES</div>
+  <ul>
+    <li><a href="#" data-go="0.14">Residences</a></li>
+    <li><a href="#" data-go="0.80">Numbers</a></li>
+    <li><a href="#" data-go="1">Visit</a></li>
+  </ul>
+</nav>
+<div id="counter"><b id="cnum">00</b> / 05 — <span id="cname">Welcome</span></div>
+<div id="hint">Scroll</div>
+
+<div id="track"></div>
+
+<div id="stage" aria-label="3D property showcase">
+  <div id="world">
+    <div id="floor"></div>
+
+    <!-- depth (z) is distance in front of start; larger = further away -->
+    <section class="item hero" data-z="0" data-x="0" data-y="0">
+      <div class="eyebrow">Luxury Residences · Est. 2004</div>
+      <h1>Walk through<br>your <em>next home</em></h1>
+      <p>Scroll to glide past five of our most remarkable properties — from glass-walled modern villas to sun-soaked city lofts.</p>
+    </section>
+
+    <div class="item float" data-z="700"  data-x="-560" data-y="-120" data-ry="28"><img data-src="photo-1600607687939-ce8a6c25118c" alt="Bright living room"></div>
+    <div class="item float" data-z="900"  data-x="560"  data-y="140"  data-ry="-28"><img data-src="photo-1556912172-45b7abe8b7e1" alt="Modern kitchen"></div>
+
+    <!-- 1 -->
+    <article class="item prop left" data-z="1500" data-x="-170" data-y="-30" data-ry="14" data-name="Villa Serena">
+      <div class="num">01</div>
+      <div class="photo"><span class="tag">For Sale</span><img data-src="photo-1613490493576-7fde63acd811" alt="Modern villa with pool at dusk"></div>
+      <div class="info">
+        <h3>Villa Serena</h3><div class="loc">Malibu, California</div>
+        <div class="price">$4,850,000</div>
+        <div class="specs"><span><b>5</b> beds</span><span><b>6</b> baths</span><span><b>6,200</b> sq ft</span></div>
+      </div>
+    </article>
+
+    <div class="item float" data-z="2250" data-x="600" data-y="-150" data-ry="-30"><img data-src="photo-1600566753190-17f0baa2a6c3" alt="Contemporary home exterior"></div>
+
+    <!-- 2 -->
+    <article class="item prop right" data-z="3000" data-x="170" data-y="-20" data-ry="-14" data-name="The Glass House">
+      <div class="num">02</div>
+      <div class="photo"><span class="tag">New Listing</span><img data-src="photo-1600596542815-ffad4c1539a9" alt="Contemporary house with large windows"></div>
+      <div class="info">
+        <h3>The Glass House</h3><div class="loc">Austin, Texas</div>
+        <div class="price">$2,395,000</div>
+        <div class="specs"><span><b>4</b> beds</span><span><b>4</b> baths</span><span><b>3,900</b> sq ft</span></div>
+      </div>
+    </article>
+
+    <div class="item float" data-z="3750" data-x="-600" data-y="130" data-ry="30"><img data-src="photo-1600585154340-be6161a56a0c" alt="Modern house facade"></div>
+
+    <!-- 3 -->
+    <article class="item prop left" data-z="4500" data-x="-170" data-y="-30" data-ry="14" data-name="Maison Lumière">
+      <div class="num">03</div>
+      <div class="photo"><span class="tag">Open House Sun</span><img data-src="photo-1564013799919-ab600027ffc6" alt="Elegant family house with garden"></div>
+      <div class="info">
+        <h3>Maison Lumière</h3><div class="loc">Greenwich, Connecticut</div>
+        <div class="price">$3,200,000</div>
+        <div class="specs"><span><b>6</b> beds</span><span><b>5</b> baths</span><span><b>5,400</b> sq ft</span></div>
+      </div>
+    </article>
+
+    <div class="item float" data-z="5250" data-x="600" data-y="-120" data-ry="-30"><img data-src="photo-1502672260266-1c1ef2d93688" alt="Stylish living room interior"></div>
+
+    <!-- 4 -->
+    <article class="item prop right" data-z="6000" data-x="170" data-y="-20" data-ry="-14" data-name="Skyline Loft">
+      <div class="num">04</div>
+      <div class="photo"><span class="tag">Penthouse</span><img data-src="photo-1545324418-cc1a3fa10c00" alt="Skyline apartment building"></div>
+      <div class="info">
+        <h3>Skyline Loft</h3><div class="loc">Manhattan, New York</div>
+        <div class="price">$6,100,000</div>
+        <div class="specs"><span><b>3</b> beds</span><span><b>3</b> baths</span><span><b>2,800</b> sq ft</span></div>
+      </div>
+    </article>
+
+    <div class="item float" data-z="6750" data-x="-590" data-y="140" data-ry="30"><img data-src="photo-1560448204-e02f11c3d0e2" alt="Open plan interior"></div>
+
+    <!-- 5 -->
+    <article class="item prop left" data-z="7500" data-x="-170" data-y="-30" data-ry="14" data-name="Casa del Sol">
+      <div class="num">05</div>
+      <div class="photo"><span class="tag">Reduced</span><img data-src="photo-1512917774080-9991f1c4c750" alt="Mediterranean style villa"></div>
+      <div class="info">
+        <h3>Casa del Sol</h3><div class="loc">Scottsdale, Arizona</div>
+        <div class="price">$1,780,000</div>
+        <div class="specs"><span><b>4</b> beds</span><span><b>3</b> baths</span><span><b>3,300</b> sq ft</span></div>
+      </div>
+    </article>
+
+    <!-- stats -->
+    <section class="item" data-z="9000" data-x="0" data-y="0" data-name="By the numbers">
+      <div class="stats" style="position:relative">
+        <h2 class="stats-title serif">Twenty years, <em style="color:var(--gold)">by the numbers</em></h2>
+        <div class="stat"><strong data-count="1200">0</strong><span>Homes sold</span></div>
+        <div class="stat"><strong data-count="3.4" data-dec="1">0</strong><span>Billion in sales</span></div>
+        <div class="stat"><strong data-count="21">0</strong><span>Days avg. on market</span></div>
+        <div class="stat"><strong data-count="98">0</strong><span>% asking price</span></div>
+      </div>
+    </section>
+
+    <!-- contact -->
+    <section class="item" data-z="10500" data-x="0" data-y="0" data-name="Book a visit">
+      <div class="contact">
+        <div class="pic"><img data-src="photo-1600047509807-ba8f99d2cdde" alt="Welcoming home interior"></div>
+        <form id="form">
+          <h2>Book a private tour</h2>
+          <p>Tell us which home caught your eye and an advisor will arrange a viewing.</p>
+          <input required placeholder="Full name" aria-label="Full name">
+          <input required type="email" placeholder="Email" aria-label="Email">
+          <select aria-label="Property">
+            <option>Villa Serena — Malibu</option><option>The Glass House — Austin</option>
+            <option>Maison Lumière — Greenwich</option><option>Skyline Loft — Manhattan</option>
+            <option>Casa del Sol — Scottsdale</option>
+          </select>
+          <button>Request viewing</button>
+          <div id="thanks" role="status"></div>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var BASE = "https://images.unsplash.com/";
+  var world = document.getElementById("world");
+  var items = [].slice.call(document.querySelectorAll(".item"));
+  var bar = document.getElementById("bar"), hint = document.getElementById("hint");
+  var cnum = document.getElementById("cnum"), cname = document.getElementById("cname");
+
+  // Load real photographs (Unsplash). Width scaled to the viewport.
+  var w = Math.min(1600, Math.round(innerWidth * Math.min(devicePixelRatio || 1, 2) * 0.8));
+  [].forEach.call(document.querySelectorAll("img[data-src]"), function (img) {
+    img.src = BASE + img.dataset.src + "?auto=format&fit=crop&w=" + w + "&q=75";
+    img.loading = "lazy";
+    img.onerror = function () { img.style.display = "none"; };
+  });
+
+  if (reduce) return;
+
+  var MAX_Z = 10500, END_PAD = 600;           // camera travels 0 → MAX_Z
+  var mx = 0, my = 0, tmx = 0, tmy = 0;       // mouse tilt (smoothed)
+  var target = 0, cam = 0;                    // scroll-driven camera (smoothed)
+  var props = items.filter(function (e) { return e.dataset.name; });
+  var mobile = innerWidth < 760;
+
+  function scrollProgress() {
+    var max = document.documentElement.scrollHeight - innerHeight;
+    return max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+  }
+  function onScroll() { target = scrollProgress() * (MAX_Z + END_PAD); }
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", function () { mobile = innerWidth < 760; onScroll(); });
+  addEventListener("mousemove", function (e) {
+    tmx = (e.clientX / innerWidth - .5) * 2;
+    tmy = (e.clientY / innerHeight - .5) * 2;
+  });
+
+  // Nav jump links
+  [].forEach.call(document.querySelectorAll("[data-go]"), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      var max = document.documentElement.scrollHeight - innerHeight;
+      scrollTo({ top: max * parseFloat(a.dataset.go), behavior: "smooth" });
+    });
+  });
+
+  // Count-up for stats
+  var counted = false;
+  function countUp() {
+    counted = true;
+    [].forEach.call(document.querySelectorAll("[data-count]"), function (el) {
+      var end = parseFloat(el.dataset.count), dec = +el.dataset.dec || 0, t0 = performance.now();
+      (function tick(t) {
+        var k = Math.min(1, (t - t0) / 1600), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = (end * e).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+        if (k < 1) requestAnimationFrame(tick);
+      })(t0);
+    });
+  }
+
+  // Contact form (demo only — nothing is sent)
+  document.getElementById("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    document.getElementById("thanks").textContent = "Thank you — an advisor will be in touch shortly.";
+    e.target.reset();
+  });
+
+  function frame() {
+    cam += (target - cam) * 0.075;
+    mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
+
+    // camera orbit from mouse + gentle sway along the path
+    var sway = Math.sin(cam / 900) * 40;
+    world.style.transform =
+      "translate3d(" + (-mx * 30 - sway) + "px," + (-my * 20) + "px," + cam + "px) " +
+      "rotateY(" + (mx * 2.2) + "deg) rotateX(" + (-my * 1.4) + "deg)";
+
+    var current = null, best = 1e9;
+    items.forEach(function (el) {
+      var z = +el.dataset.z, x = +el.dataset.x, y = +el.dataset.y, ry = +el.dataset.ry || 0;
+      var d = z - cam;                       // >0: still ahead of camera, <0: behind it
+      if (mobile) x *= 0.15;
+      // Panels slowly turn to face the camera as it arrives
+      var face = Math.max(-1, Math.min(1, d / 1400));
+      el.style.transform =
+        "translate3d(" + x + "px," + y + "px," + (-z) + "px) translate(-50%,-50%) rotateY(" + (ry * face) + "deg)";
+      // fade in from far away, fade out just after passing the lens
+      var op = d > 0 ? 1 - Math.max(0, (d - 650)) / 700 : 1 + d / 380;
+      el.style.opacity = Math.max(0, Math.min(1, op)).toFixed(3);
+      el.style.pointerEvents = Math.abs(d) < 500 ? "auto" : "none";
+      el.style.visibility = op <= 0 ? "hidden" : "visible";
+      if (el.dataset.name && Math.abs(d) < best) { best = Math.abs(d); current = el; }
+    });
+
+    var p = cam / (MAX_Z + END_PAD);
+    bar.style.width = (p * 100) + "%";
+    hint.style.opacity = cam > 150 ? 0 : 1;
+    if (current && best < 900) {
+      var i = props.indexOf(current) ;
+      cnum.textContent = ("0" + (i <= 4 ? i + 1 : 5)).slice(-2);
+      cname.textContent = current.dataset.name;
+      if (!counted && /numbers/i.test(current.dataset.name)) countUp();
+    } else if (cam < 400) { cnum.textContent = "00"; cname.textContent = "Welcome"; }
+
+    requestAnimationFrame(frame);
+  }
+  onScroll(); cam = target;
+  frame();
+})();
+</script>
+</body>
+</html>
