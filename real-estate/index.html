@@ -17,7 +17,10 @@
 html{scroll-behavior:auto}
 body{background:#0c1118;color:var(--ink);font-family:Inter,system-ui,sans-serif;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
 #scene{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
-.vignette{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.35) 100%)}
+.photos{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;will-change:opacity}
+.photos img{position:absolute;inset:-2%;width:104%;height:104%;object-fit:cover;opacity:0;will-change:opacity,transform}
+.photos::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,12,18,.55),rgba(8,12,18,.18) 45%,transparent 70%),linear-gradient(180deg,rgba(8,12,18,.35),transparent 18%)}
+.vignette{position:fixed;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.35) 100%)}
 header{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:20px clamp(16px,4vw,48px)}
 .brand{font-family:'Cormorant Garamond',serif;font-size:1.5rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
 .brand span{color:var(--gold)}
@@ -79,6 +82,7 @@ footer{position:relative;z-index:5;text-align:center;padding:26px 16px;font-size
 <div class="progress" id="bar"></div>
 <canvas id="scene" aria-hidden="true"></canvas>
 <div id="nogl"></div>
+<div class="photos" id="photos" aria-hidden="true"><img src="img/scene1.webp" alt="" decoding="async"><img src="img/scene2.webp" alt="" decoding="async"><img src="img/scene3.webp" alt="" decoding="async"><img src="img/scene4.webp" alt="" decoding="async"><img src="img/scene5.webp" alt="" decoding="async"></div>
 <div class="vignette"></div>
 
 <header>
@@ -101,7 +105,7 @@ footer{position:relative;z-index:5;text-align:center;padding:26px 16px;font-size
     </div>
   </section>
 
-  <section id="exterior" class="right" data-label="Exterior">
+  <section id="exterior" data-label="Exterior">
     <div class="card">
       <div class="eyebrow">01 · Architecture</div>
       <h2>Cantilevered. Weightless.</h2>
@@ -217,12 +221,28 @@ function scrollProgress(){
   return max>0 ? Math.min(1,Math.max(0,scrollY/max)) : 0;
 }
 
+const photoEls = [...document.querySelectorAll('#photos img')];
+const photoWrap = document.getElementById('photos');
+const clamp01 = v => Math.min(1, Math.max(0, v));
+// Photo scenes cover sections 0-4; they cross-fade into the live 3D scene after that.
+function updatePhotos(p){
+  const s = p*(sections.length-1);
+  photoWrap.style.opacity = clamp01(1-(s-4.6)/0.3);
+  photoEls.forEach((el,i)=>{
+    el.style.opacity = clamp01((s-(i-0.4))/0.3);
+    const z = clamp01((s-(i-0.5))/1.5);
+    el.style.transform = `scale(${1+0.06*z}) translateY(${(-(s-i)*14).toFixed(1)}px)`;
+  });
+}
+updatePhotos(scrollProgress());
+
 let renderer;
 try{
   renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
 }catch(err){
   document.getElementById('nogl').style.display='block';
   loader.classList.add('done');
+  (function loop(){ updatePhotos(scrollProgress()); requestAnimationFrame(loop); })();
   console.warn('WebGL unavailable', err);
 }
 
@@ -450,6 +470,7 @@ function frame(){
   const f = 0.8 + Math.sin(t*9)*.15 + Math.sin(t*5.3)*.1;
   flame.intensity = mood*16*f; fireGlow.intensity = mood*30*f;
 
+  updatePhotos(cur);
   bar.style.transform = `scaleX(${cur})`;
   const idx = Math.round(cur*(sections.length-1));
   dotEls.forEach((d,i)=>d.classList.toggle('on', i===idx));
