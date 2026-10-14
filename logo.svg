@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 1024" width="576" height="1024">
+  <defs>
+    <radialGradient id="wall" cx="50%" cy="45%" r="75%">
+      <stop offset="0" stop-color="#f4f5f6"/>
+      <stop offset="1" stop-color="#dfe2e6"/>
+    </radialGradient>
+    <clipPath id="disc"><circle cx="0" cy="0" r="195"/></clipPath>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+    <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#0a2aa0"/><stop offset="1" stop-color="#1a3fc4"/></linearGradient>
+    <linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#1536b8"/><stop offset="1" stop-color="#2450d0"/></linearGradient>
+    <linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#1f5cc8"/><stop offset="1" stop-color="#2f78d6"/></linearGradient>
+    <linearGradient id="g4" x1="0" x2="1"><stop offset="0" stop-color="#2a7ad8"/><stop offset="1" stop-color="#3b8fe2"/></linearGradient>
+    <linearGradient id="g5" x1="0" x2="1"><stop offset="0" stop-color="#4a98e0"/><stop offset="1" stop-color="#7cb8ea"/></linearGradient>
+    <linearGradient id="g6" x1="0" x2="1"><stop offset="0" stop-color="#a6d2f0"/><stop offset="1" stop-color="#c4e4f7"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6fafd"/>
+      <stop offset="1" stop-color="#e3eef7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="576" height="1024" fill="url(#wall)"/>
+
+  <g transform="translate(303 490)">
+    <!-- soft wall shadow -->
+    <circle cx="-14" cy="12" r="195" fill="#7d8794" opacity=".35" filter="url(#blur)"/>
+    <!-- disc thickness (left edge) -->
+    <circle cx="-9" cy="3" r="195" fill="#0b2a9a"/>
+    <!-- clear acrylic disc -->
+    <circle r="195" fill="url(#glass)" stroke="#e9f2f9" stroke-width="2"/>
+
+    <g clip-path="url(#disc)">
+      <g transform="rotate(-10)">
+        <!-- bars -->
+        <polygon points="-196,-110 -166,-110 -166,150 -196,150" fill="url(#g1)"/>
+        <polygon points="-146,-200 -104,-200 -104,35 -86,35 -86,215 -146,215" fill="url(#g2)"/>
+        <polygon points="-92,-225 -48,-225 -48,45 -30,45 -30,230 -92,230" fill="url(#g3)"/>
+        <polygon points="-34,-240 14,-240 14,190 34,190 34,235 -34,235" fill="url(#g4)"/>
+        <polygon points="26,-230 66,-230 66,50 82,50 82,175 26,175" fill="url(#g5)"/>
+        <polygon points="86,-195 114,-195 114,150 86,150" fill="url(#g6)"/>
+        <polygon points="130,-150 148,-150 148,110 130,110" fill="url(#g6)" opacity=".85"/>
+      </g>
+    </g>
+  </g>
+</svg>
