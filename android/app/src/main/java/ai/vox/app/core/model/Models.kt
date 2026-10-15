@@ -44,6 +44,8 @@ data class Turn(
     /** For user turns: how to re-run this turn on "regenerate". */
     val task: AiTask = AiTask.CHAT,
     val spoken: Boolean = false,
+    /** Machine-generated prompt (e.g. a sampled live frame). Kept in context but hidden from the chat UI. */
+    val auto: Boolean = false,
     val imageCount: Int = parts.count { it is ContentPart.Image },
 )
 

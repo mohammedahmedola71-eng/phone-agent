@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Vox AI</string>
+    <string name="capture_channel_name">Screen capture</string>
+    <string name="capture_channel_desc">Shown while Vox is allowed to capture your screen.</string>
+</resources>

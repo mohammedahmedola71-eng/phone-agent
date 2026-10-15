@@ -85,8 +85,8 @@ class Assistant(
     fun restore() { _turns.value = store?.load(name).orEmpty() }
 
     /** Sends a user turn and asks the model. [display] is shown in the chat; [parts] go to the model. */
-    fun ask(task: AiTask, display: String, parts: List<ContentPart> = listOf(ContentPart.Text(display)), spoken: Boolean = false): Job {
-        val user = Turn(newId(), Role.USER, display, parts, clock(), task = task, spoken = spoken)
+    fun ask(task: AiTask, display: String, parts: List<ContentPart> = listOf(ContentPart.Text(display)), spoken: Boolean = false, auto: Boolean = false): Job {
+        val user = Turn(newId(), Role.USER, display, parts, clock(), task = task, spoken = spoken, auto = auto)
         _turns.update { History.prune(it, maxImagesInContext - user.imageCount.coerceAtMost(maxImagesInContext)) + user }
         return run(task, spoken)
     }

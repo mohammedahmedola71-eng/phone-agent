@@ -115,5 +115,6 @@ class AssistantAndGatewayTest {
         val req = AiRequest(AiTask.CHAT, listOf(ai.vox.app.core.model.AiMessage(Role.USER, listOf(ContentPart.Text("q")))), ResponseLength.SHORT, false)
         try { GatewayAiProvider(config = { GatewayConfig("", "") }).complete(req); fail() } catch (e: AiException.NotConfigured) {}
         try { GatewayAiProvider(config = { GatewayConfig("http://127.0.0.1:1/", "t") }).complete(req); fail() } catch (e: AiException.Network) {}
+        try { GatewayAiProvider(config = { GatewayConfig("http://vox.example.com", "t") }).complete(req); fail() } catch (e: AiException.NotConfigured) { assertTrue(e.userMessage.contains("https://")) }
     }
 }

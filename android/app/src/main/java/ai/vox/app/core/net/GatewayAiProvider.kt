@@ -3,7 +3,9 @@ package ai.vox.app.core.net
 import ai.vox.app.core.model.ContentPart
 import ai.vox.app.core.model.ResponseLength
 import ai.vox.app.core.model.Role
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -69,7 +71,9 @@ class GatewayAiProvider(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
 
-    override suspend fun complete(request: AiRequest): AiReply {
+    override suspend fun complete(request: AiRequest): AiReply = withContext(Dispatchers.Default) { completeInternal(request) }
+
+    private suspend fun completeInternal(request: AiRequest): AiReply {
         val wire = WireRequest(
             task = request.task.wire,
             responseLength = request.length.name.lowercase(),
@@ -115,7 +119,8 @@ class GatewayAiProvider(
         val c = config()
         if (c.baseUrl.isBlank() || c.token.isBlank()) throw AiException.NotConfigured()
         val base = c.baseUrl.trim().trimEnd('/') + "/"
-        val url = (base + path).toHttpUrlOrNull() ?: throw AiException.NotConfigured()
+        val url = (base + path).toHttpUrlOrNull() ?: throw AiException.NotConfigured("The gateway address isn't a valid web address.")
+        if (!url.isHttps && url.host !in LOCAL_DEV_HOSTS) throw AiException.NotConfigured("The gateway address must start with https:// so your content is encrypted in transit.")
         return Request.Builder().url(url).header("Authorization", "Bearer ${c.token.trim()}").header("Accept", "application/json")
     }
 
@@ -147,6 +152,8 @@ class GatewayAiProvider(
     }
 
     companion object {
+        /** Cleartext is only tolerated for local development (debug builds also allow these in the network security config). */
+        private val LOCAL_DEV_HOSTS = setOf("10.0.2.2", "localhost", "127.0.0.1")
         private val JSON = "application/json; charset=utf-8".toMediaType()
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
