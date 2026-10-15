@@ -1,0 +1,3 @@
+# kotlinx.serialization keeps generated serializers via its own consumer rules.
+-keepattributes *Annotation*, InnerClasses
+-dontwarn org.slf4j.**
