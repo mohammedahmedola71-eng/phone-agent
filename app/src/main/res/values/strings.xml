@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">VOX AI</string>
+    <string name="accessibility_description">VOX AI reads the screen and performs taps, typing and navigation only while you have a session running.</string>
+</resources>
